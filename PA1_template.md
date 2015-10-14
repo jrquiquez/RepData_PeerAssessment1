@@ -50,7 +50,26 @@ stepsdaymedian <- median(stepsday$stepsday)
 As you can see above the mean 9354.23 and the median 10395 are pretty close. 
 
 ## What is the average daily activity pattern?
+Sometimes it is convinient to see a timeseries in a graphic way. It is the easier way to visualize some patterns. 
 
+
+```r
+patternday <- group_by(dataset,interval)
+patternday <- summarise(patternday,meaninterval=mean(steps,na.rm = T))
+plot(patternday$interval,patternday$meaninterval,type = "l", main = "Daily Activity Pattern",xlab = "5 minute Interval", ylab = "Average of Steps Taken")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
+
+Now that we can see how the sample behaves during the day. We can answer the following question:  
+**Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?** 
+
+```r
+maxsteps<-filter(patternday,meaninterval==max(meaninterval))
+```
+
+
+#### In average the time with most steps is **8:35** with **206.17** steps
 
 
 ## Imputing missing values

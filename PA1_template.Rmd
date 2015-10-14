@@ -50,7 +50,24 @@ stepsdaymedian <- median(stepsday$stepsday)
 As you can see above the mean `r round(stepsdaymean,digits=2)` and the median `r stepsdaymedian` are pretty close. 
 
 ## What is the average daily activity pattern?
+Sometimes it is convinient to see a timeseries in a graphic way. It is the easier way to visualize some patterns. 
 
+```{r}
+patternday <- group_by(dataset,interval)
+patternday <- summarise(patternday,meaninterval=mean(steps,na.rm = T))
+plot(patternday$interval,patternday$meaninterval,type = "l", main = "Daily Activity Pattern",xlab = "5 minute Interval", ylab = "Average of Steps Taken")
+```
+
+Now that we can see how the sample behaves during the day. We can answer the following question:  
+**Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?** 
+```{r}
+maxsteps<-filter(patternday,meaninterval==max(meaninterval))
+```
+```{r echo=FALSE}
+maxsteps[,1]<-gsub("([0-9]{1,2})([0-9]{2})", "\\1:\\2", maxsteps[,1])
+```
+
+#### In average the time with most steps is **`r maxsteps[,1]`** with **`r round(maxsteps[,2],digits=2)`** steps
 
 
 ## Imputing missing values
