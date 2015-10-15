@@ -10,6 +10,7 @@ output:
 We're going to need some libraries in order to make this project easier. In this case we'll use dplyr
 ```{r,warning=FALSE, message=FALSE}
 library(dplyr)
+library(lattice)
 ```
 
 
@@ -31,10 +32,11 @@ dataset$date <- as.Date(dataset$date,"%Y-%m-%d")
 ```
 
 ## What is mean total number of steps taken per day?
-First we need to calc the total of steps for each day and put it into a graph for ease of understanding. 
+First we need to calc the total of steps for each day and put it into a graph for ease of understanding. We'll remove the NA even that this reduce our sample from 61 to 53. But it will bias our research to asume a zero on this dates. 
 
 ```{r}
 stepsday <- group_by(dataset,date)
+stepsday <- filter(stepsday,!is.na(steps))
 stepsday<-summarise(stepsday,stepsday=sum(steps,na.rm = T))
 hist(stepsday$stepsday, main = "Steps per Day",xlab = "Steps per day",ylab = "Frequency",col = "orange")
 ```
@@ -67,11 +69,58 @@ maxsteps<-filter(patternday,meaninterval==max(meaninterval))
 maxsteps[,1]<-gsub("([0-9]{1,2})([0-9]{2})", "\\1:\\2", maxsteps[,1])
 ```
 
-#### In average the time with most steps is **`r maxsteps[,1]`** with **`r round(maxsteps[,2],digits=2)`** steps
+In average the time with most steps is **`r maxsteps[,1]`** with **`r round(maxsteps[,2],digits=2)`** steps
 
 
 ## Imputing missing values
 
+1. Calculating how many missing values exist in the dataset. 
 
+```{r}
+missingdata<-filter(dataset,is.na(steps))
+nacount<-length(x = missingdata$steps)
+nacount
+```
+
+2. Devise a strategy to fill the NA
+
+We consider a good strategy to use the mean of the 5 mins interval for each NA. This means the following: If the NA ocurrs at **`r maxsteps[,1]`** (where most steps happen) we replace the NA with **`r round(maxsteps[,2],digits=2)`** that is the mean of steps that happen at this time of the day. This times are already calc in the dataframe Paternday. 
+
+```{r}
+missingdata<-select(missingdata,date,interval)
+missingdata<-inner_join(missingdata,patternday)
+missingdata<-select(missingdata,steps=meaninterval,date,interval)
+```
+
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in
+
+```{r}
+newdata<-rbind(filter(dataset,!is.na(steps)),missingdata)
+```
+
+4. Make an Histogram and calc the mean and median.
+
+We're going to borrow the code and process used in the first question. 
+
+```{r}
+newstepsday <- group_by(newdata,date)
+newstepsday<-summarise(newstepsday,stepsday=sum(steps,na.rm = T))
+hist(newstepsday$stepsday, main = "Steps per Day",xlab = "Steps per day",ylab = "Frequency",col = "red")
+```
+
+
+```{r}
+newstepsdaymean <- mean(newstepsday$stepsday)
+newstepsdaymedian <- median(newstepsday$stepsday)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+newdata<-mutate(newdata,typeday= weekdays(date))
+newdata<-mutate(newdata,typeday= ifelse(typeday=="Sunday", "Weekend", ifelse(typeday=="Saturday","Weekend","Weekday")))
+newpatternday <- group_by(newdata,interval,typeday)
+newpatternday <- summarise(newpatternday,meaninterval=mean(steps,na.rm = T))
+xyplot(meaninterval ~ interval | typeday, newpatternday, type = "l", layout = c(1, 2),xlab = "Interval", ylab = "Number of steps")
+```
+

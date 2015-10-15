@@ -5,6 +5,7 @@ We're going to need some libraries in order to make this project easier. In this
 
 ```r
 library(dplyr)
+library(lattice)
 ```
 
 
@@ -27,11 +28,12 @@ dataset$date <- as.Date(dataset$date,"%Y-%m-%d")
 ```
 
 ## What is mean total number of steps taken per day?
-First we need to calc the total of steps for each day and put it into a graph for ease of understanding. 
+First we need to calc the total of steps for each day and put it into a graph for ease of understanding. We'll remove the NA even that this reduce our sample from 61 to 53. But it will bias our research to asume a zero on this dates. 
 
 
 ```r
 stepsday <- group_by(dataset,date)
+stepsday <- filter(stepsday,!is.na(steps))
 stepsday<-summarise(stepsday,stepsday=sum(steps,na.rm = T))
 hist(stepsday$stepsday, main = "Steps per Day",xlab = "Steps per day",ylab = "Frequency",col = "orange")
 ```
@@ -45,9 +47,9 @@ stepsdaymean <- mean(stepsday$stepsday)
 stepsdaymedian <- median(stepsday$stepsday)
 ```
 
-* #### **Mean of steps per day: 9354.23**
-* #### **Median of steps per day: 10395**
-As you can see above the mean 9354.23 and the median 10395 are pretty close. 
+* #### **Mean of steps per day: 1.076619\times 10^{4}**
+* #### **Median of steps per day: 10765**
+As you can see above the mean 1.076619\times 10^{4} and the median 10765 are pretty close. 
 
 ## What is the average daily activity pattern?
 Sometimes it is convinient to see a timeseries in a graphic way. It is the easier way to visualize some patterns. 
@@ -69,11 +71,79 @@ maxsteps<-filter(patternday,meaninterval==max(meaninterval))
 ```
 
 
-#### In average the time with most steps is **8:35** with **206.17** steps
+In average the time with most steps is **8:35** with **206.17** steps
 
 
 ## Imputing missing values
 
+1. Calculating how many missing values exist in the dataset. 
 
+
+```r
+missingdata<-filter(dataset,is.na(steps))
+nacount<-length(x = missingdata$steps)
+nacount
+```
+
+```
+## [1] 2304
+```
+
+2. Devise a strategy to fill the NA
+
+We consider a good strategy to use the mean of the 5 mins interval for each NA. This means the following: If the NA ocurrs at **8:35** (where most steps happen) we replace the NA with **206.17** that is the mean of steps that happen at this time of the day. This times are already calc in the dataframe Paternday. 
+
+
+```r
+missingdata<-select(missingdata,date,interval)
+missingdata<-inner_join(missingdata,patternday)
+```
+
+```
+## Joining by: "interval"
+```
+
+```r
+missingdata<-select(missingdata,steps=meaninterval,date,interval)
+```
+
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in
+
+
+```r
+newdata<-rbind(filter(dataset,!is.na(steps)),missingdata)
+```
+
+4. Make an Histogram and calc the mean and median.
+
+We're going to borrow the code and process used in the first question. 
+
+
+```r
+newstepsday <- group_by(newdata,date)
+newstepsday<-summarise(newstepsday,stepsday=sum(steps,na.rm = T))
+hist(newstepsday$stepsday, main = "Steps per Day",xlab = "Steps per day",ylab = "Frequency",col = "red")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-11-1.png) 
+
+
+
+```r
+newstepsdaymean <- mean(newstepsday$stepsday)
+newstepsdaymedian <- median(newstepsday$stepsday)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+
+```r
+newdata<-mutate(newdata,typeday= weekdays(date))
+newdata<-mutate(newdata,typeday= ifelse(typeday=="Sunday", "Weekend", ifelse(typeday=="Saturday","Weekend","Weekday")))
+newpatternday <- group_by(newdata,interval,typeday)
+newpatternday <- summarise(newpatternday,meaninterval=mean(steps,na.rm = T))
+xyplot(meaninterval ~ interval | typeday, newpatternday, type = "l", layout = c(1, 2),xlab = "Interval", ylab = "Number of steps")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-13-1.png) 
+
